@@ -88,6 +88,7 @@ func init() {
 	rootCommand.AddCommand(versionCommand)
 	rootCommand.AddCommand(configureCmd)
 	rootCommand.AddCommand(newDiagnosticsCommand())
+	rootCommand.AddCommand(newSelfupdateCommand())
 }
 
 func isDockerSnap() bool {
@@ -290,7 +291,7 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		log.WithField("error", err).Fatal("failed to initialize cron system")
 	} else {
 		log.WithField("subsystem", "cron").Info("starting cron processes")
-		s.StartAsync()
+		s.Start()
 	}
 
 	go func() {
