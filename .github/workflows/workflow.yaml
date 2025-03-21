@@ -11,6 +11,8 @@ jobs:
       image: catthehacker/ubuntu:act-latest
     env:
       DOCKER_ORG: ${{ github.actor }}
+      DOCKER_TITEL: Pelican Wing
+      DOCKER_DESC: Modified Pelican Wing for Unraid
       DOCKER_PACKAGE: pelican-wing
       DOCKER_LATEST: latest
       RUNNER_TOOL_CACHE: /toolcache
@@ -64,8 +66,8 @@ jobs:
           labels: |
             org.opencontainers.image.authors=${{ github.actor }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.title=Pelican Wing
-            org.opencontainers.image.description=Modified Pelican Wing for Unraid
+            org.opencontainers.image.title=${{ env.DOCKER_TITEL }}
+            org.opencontainers.image.description=${{ env.DOCKER_DESC }}
             org.opencontainers.image.created=${{ steps.meta.outputs.DATE }}
             org.opencontainers.image.version=${{ steps.meta.outputs.REPO_VERSION }}
           provenance: false
