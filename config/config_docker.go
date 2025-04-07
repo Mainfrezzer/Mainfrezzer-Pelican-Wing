@@ -16,7 +16,7 @@ type dockerNetworkInterfaces struct {
 	}
 	V6 struct {
 		Subnet  string `default:"fd00:10:16:5::/64"`
-		Gateway string `default:"fd00:10:16:5::1011"`
+		Gateway string `default:"fd00:10:16:5::/64"`
 	}
 }
 
