@@ -125,7 +125,7 @@ type RemoteQueryConfiguration struct {
 // SystemConfiguration defines basic system configuration settings.
 type SystemConfiguration struct {
 	// The root directory where all of the pelican data is stored at.
-	RootDirectory string `default:"/mnt/user/appdata/pelican-wing/" json:"-" yaml:"root_directory"`
+	RootDirectory string `default:"/mnt/user/appdata/pelican-wing" json:"-" yaml:"root_directory"`
 
 	// Directory where logs for server installations and other wings events are logged.
 	LogDirectory string `default:"/mnt/user/appdata/pelican-wing/log" json:"-" yaml:"log_directory"`
