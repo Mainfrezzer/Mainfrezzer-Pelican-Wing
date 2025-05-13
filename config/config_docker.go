@@ -33,7 +33,7 @@ type DockerNetworkConfiguration struct {
 	// defined.
 	Name       string                  `default:"pelican_net"`
 	ISPN       bool                    `default:"false" yaml:"ispn"`
-	IPv6       bool                    `default:"true" yaml:"IPv6"`
+	IPv6       bool                    `default:"false" yaml:"IPv6"`
 	Driver     string                  `default:"bridge"`
 	Mode       string                  `default:"pelican_net" yaml:"network_mode"`
 	IsInternal bool                    `default:"false" yaml:"is_internal"`
