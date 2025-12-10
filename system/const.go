@@ -1,3 +1,3 @@
 package system
 
-var Version = "1.0.0-beta19"
+var Version = "1.0.0-beta20"
