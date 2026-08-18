@@ -58,6 +58,7 @@ jobs:
           platforms: |
             linux/amd64
           push: true
+          outputs: type=image,push=true,oci-mediatypes=false
           tags: |
             ${{ steps.meta.outputs.REPO }}/${{ steps.meta.outputs.REPO_NAME }}:${{ steps.meta.outputs.REPO_VERSION }}
             ${{ steps.meta.outputs.REPO }}/${{ steps.meta.outputs.REPO_NAME }}:${{ env.DOCKER_LATEST }}
