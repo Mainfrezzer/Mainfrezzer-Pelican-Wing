@@ -24,6 +24,7 @@ import (
 
 	"github.com/pelican/wings/config"
 	"github.com/pelican/wings/environment"
+	"github.com/pelican/wings/environment/docker"
 	"github.com/pelican/wings/remote"
 	"github.com/pelican/wings/system"
 )
@@ -177,7 +178,7 @@ func (s *Server) SetRestoring(state bool) {
 }
 
 func (s *Server) IsInProtectedState() bool {
-	return s.IsInstalling() || s.IsTransferring() || s.IsRestoring()	
+	return s.IsInstalling() || s.IsTransferring() || s.IsRestoring()
 }
 
 // RemoveContainer removes the installation container for the server.
@@ -214,10 +215,10 @@ func (ip *InstallationProcess) Run() error {
 		return err
 	}
 
-	cID, err := ip.Execute()
-	if err != nil {
+	cID, executeErr := ip.Execute()
+	if cID == "" {
 		_ = ip.RemoveContainer()
-		return err
+		return executeErr
 	}
 
 	// If this step fails, log a warning but don't exit out of the process. This is completely
@@ -226,7 +227,7 @@ func (ip *InstallationProcess) Run() error {
 		ip.Server.Log().WithField("error", err).Warn("failed to complete after-execute step of installation process")
 	}
 
-	return nil
+	return executeErr
 }
 
 // Returns the location of the temporary data for the installation process.
@@ -473,8 +474,10 @@ func (ip *InstallationProcess) Execute() (string, error) {
 	// Ensure the root directory for the server exists properly before attempting
 	// to trigger the reinstall of the server. It is possible the directory would
 	// not exist when this runs if Wings boots with a missing directory and a user
-	// triggers a reinstall before trying to start the server.
-	if err := ip.Server.EnsureDataDirectoryExists(); err != nil {
+	// triggers a reinstall before trying to start the server, or if the folder was
+	// deleted while Wings was running. The server's Filesystem opens the new folder
+	// on its next call (see Filesystem.openRoot).
+	if _, err := ip.Server.EnsureDataDirectoryExists(); err != nil {
 		return "", err
 	}
 
@@ -516,6 +519,8 @@ func (ip *InstallationProcess) Execute() (string, error) {
 		return "", err
 	}
 
+	docker.SetCpuBurst(ctx, ip.client, r.ID, hostConf.Resources.CPUQuota)
+
 	// Process the install event in the background by listening to the stream output until the
 	// container has stopped, at which point we'll disconnect from it.
 	//
@@ -529,18 +534,43 @@ func (ip *InstallationProcess) Execute() (string, error) {
 	}(r.ID)
 
 	sChan, eChan := ip.client.ContainerWait(ctx, r.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-eChan:
-		// Once the container has stopped running we can mark the install process as being completed.
-		if err == nil {
-			ip.Server.Events().Publish(DaemonMessageEvent, "Installation process completed.")
-		} else {
-			return "", err
-		}
-	case <-sChan:
+	if err := ip.waitForInstallationContainer(sChan, eChan); err != nil {
+		return r.ID, err
 	}
 
 	return r.ID, nil
+}
+
+func (ip *InstallationProcess) waitForInstallationContainer(sChan <-chan container.WaitResponse, eChan <-chan error) error {
+	select {
+	case err := <-eChan:
+		ip.Server.Events().Publish(DaemonMessageEvent, "Installation process failed: "+err.Error())
+		return err
+	case response := <-sChan:
+		if err := installationWaitError(response); err != nil {
+			ip.Server.Events().Publish(DaemonMessageEvent, "Installation process failed: "+err.Error())
+			return err
+		}
+	}
+
+	ip.Server.Events().Publish(DaemonMessageEvent, "Installation process completed.")
+	return nil
+}
+
+func installationWaitError(response container.WaitResponse) error {
+	if response.Error != nil {
+		message := strings.TrimSpace(response.Error.Message)
+		if message == "" {
+			message = "unknown container wait error"
+		}
+
+		return errors.Errorf("install: installation container wait failed: %s", message)
+	}
+	if response.StatusCode != 0 {
+		return errors.Errorf("install: installation script exited with code %d", response.StatusCode)
+	}
+
+	return nil
 }
 
 // StreamOutput streams the output of the installation process to a log file in
